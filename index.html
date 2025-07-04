@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Akıllı Görev Takip</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      padding: 0;
+      margin: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #1e1e2f;
+      color: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: #2a2a40;
+      padding: 30px 25px;
+      border-radius: 18px;
+      width: 100%;
+      max-width: 450px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 26px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      outline: none;
+      font-size: 15px;
+      background: #40405a;
+      color: #fff;
+    }
+
+    input::placeholder {
+      color: #bbb;
+    }
+
+    button {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 10px;
+      background-color: #4e9af1;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #2f7fe6;
+    }
+
+    .filters {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+
+    .filters button {
+      flex: 1;
+      margin: 0 5px;
+      background-color: #383857;
+      color: #aaa;
+      font-size: 14px;
+    }
+
+    .filters button.active {
+      background-color: #4e9af1;
+      color: white;
+    }
+
+    ul {
+      list-style: none;
+      margin-top: 10px;
+    }
+
+    li {
+      background: #34344d;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+
+    li.tamamlandi {
+      background: #2d4d35;
+    }
+
+    .gorev-metin {
+      flex: 1;
+      font-size: 15px;
+      color: #f4f4f4;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tamamlandi .gorev-metin {
+      text-decoration: line-through;
+      color: #a4d4af;
+    }
+
+    .butonlar {
+      display: flex;
+      gap: 6px;
+    }
+
+    .sil-btn, .tamamla-btn {
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .sil-btn {
+      background-color: #e74c3c;
+      color: white;
+    }
+
+    .tamamla-btn {
+      background-color: #27ae60;
+      color: white;
+    }
+
+    .clear-btn {
+      margin-top: 20px;
+      width: 100%;
+      background-color: #6c757d;
+    }
+
+    .fade-transition {
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+    }
+
+    .fade-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .bos-mesaj {
+      text-align: center;
+      margin-top: 20px;
+      color: #aaa;
+      font-size: 15px;
+    }
+
+    @media (max-width: 500px) {
+      .input-group {
+        flex-direction: column;
+      }
+
+      .filters {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .filters button {
+        margin: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📋 Görev Takip</h1>
+
+    <div class="input-group">
+      <input type="text" id="gorevInput" placeholder="Yeni görev girin..." />
+      <button onclick="gorevEkle()">➕</button>
+    </div>
+
+    <div class="filters">
+      <button onclick="filtrele('tum')" id="filtre-tum" class="active">Tümü</button>
+      <button onclick="filtrele('aktif')" id="filtre-aktif">Aktif</button>
+      <button onclick="filtrele('tamamlanan')" id="filtre-tamamlanan">Tamamlanan</button>
+    </div>
+
+    <ul id="gorevListesi"></ul>
+    <p id="bosMesaj" class="bos-mesaj" style="display: none;">Görev bulunamadı.</p>
+
+    <button class="clear-btn" onclick="tumunuSil()">Tümünü Temizle 🗑️</button>
+  </div>
+
+  <script>
+    let filtre = "tum";
+
+    window.onload = () => {
+      gorevleriYukle();
+      filtrele(filtre);
+    };
+
+    document.getElementById("gorevInput").addEventListener("keydown", function(e) {
+      if (e.key === "Enter") {
+        gorevEkle();
+      }
+    });
+
+    function gorevEkle() {
+      const input = document.getElementById("gorevInput");
+      const metin = input.value.trim();
+      if (metin === "") return;
+
+      const li = document.createElement("li");
+
+      const span = document.createElement("span");
+      span.className = "gorev-metin";
+      span.innerHTML = `🟢 ${metin}`;
+
+      const butonlar = document.createElement("div");
+      butonlar.className = "butonlar";
+
+      const tamamlaBtn = document.createElement("button");
+      tamamlaBtn.textContent = "Tamamla";
+      tamamlaBtn.className = "tamamla-btn";
+      tamamlaBtn.onclick = function () {
+        li.classList.toggle("tamamlandi");
+        span.innerHTML = li.classList.contains("tamamlandi") ? `✅ ${metin}` : `🟢 ${metin}`;
+        gorevleriKaydet();
+        filtrele(filtre);
+      };
+
+      const silBtn = document.createElement("button");
+      silBtn.textContent = "Sil";
+      silBtn.className = "sil-btn";
+      silBtn.onclick = function () {
+        li.remove();
+        gorevleriKaydet();
+        filtrele(filtre);
+      };
+
+      butonlar.appendChild(tamamlaBtn);
+      butonlar.appendChild(silBtn);
+
+      li.appendChild(span);
+      li.appendChild(butonlar);
+
+      document.getElementById("gorevListesi").appendChild(li);
+      input.value = "";
+      gorevleriKaydet();
+      filtrele(filtre);
+    }
+
+    function gorevleriKaydet() {
+      localStorage.setItem("gorevler", document.getElementById("gorevListesi").innerHTML);
+    }
+
+    function gorevleriYukle() {
+      const veri = localStorage.getItem("gorevler");
+      if (veri) {
+        document.getElementById("gorevListesi").innerHTML = veri;
+
+        document.querySelectorAll("#gorevListesi li").forEach((li) => {
+          const span = li.querySelector(".gorev-metin");
+          const tamamlaBtn = li.querySelector(".tamamla-btn");
+          const silBtn = li.querySelector(".sil-btn");
+
+          if (tamamlaBtn && span) {
+            const metin = span.textContent.replace(/^✅ |^🟢 /, "");
+            tamamlaBtn.onclick = function () {
+              li.classList.toggle("tamamlandi");
+              span.innerHTML = li.classList.contains("tamamlandi") ? `✅ ${metin}` : `🟢 ${metin}`;
+              gorevleriKaydet();
+              filtrele(filtre);
+            };
+          }
+
+          if (silBtn) {
+            silBtn.onclick = function () {
+              li.remove();
+              gorevleriKaydet();
+              filtrele(filtre);
+            };
+          }
+        });
+      }
+    }
+
+    function filtrele(tip) {
+      filtre = tip;
+
+      document.querySelectorAll(".filters button").forEach(btn => btn.classList.remove("active"));
+      document.getElementById("filtre-" + tip).classList.add("active");
+
+      const tumGorevler = document.querySelectorAll("#gorevListesi li");
+      let gosterilenSayisi = 0;
+
+      tumGorevler.forEach(li => {
+        li.classList.remove("fade-visible", "fade-transition");
+        li.offsetHeight;
+
+        let goster = false;
+        if (tip === "tum") goster = true;
+        else if (tip === "aktif") goster = !li.classList.contains("tamamlandi");
+        else if (tip === "tamamlanan") goster = li.classList.contains("tamamlandi");
+
+        if (goster) {
+          li.style.display = "flex";
+          li.classList.add("fade-transition");
+          setTimeout(() => {
+            li.classList.add("fade-visible");
+          }, 10);
+          gosterilenSayisi++;
+        } else {
+          li.style.display = "none";
+        }
+      });
+
+      document.getElementById("bosMesaj").style.display = gosterilenSayisi === 0 ? "block" : "none";
+    }
+
+    function tumunuSil() {
+      if (confirm("Tüm görevleri silmek istediğine emin misin?")) {
+        document.getElementById("gorevListesi").innerHTML = "";
+        gorevleriKaydet();
+        filtrele(filtre);
+      }
+    }
+  </script>
+</body>
+</html>
